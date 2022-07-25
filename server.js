@@ -61,11 +61,12 @@ app.post('/api/sendBnb', async function(req,res) {
 });
 app.post('/api/sendToken', async function(req,res) {
   try {
-    console.log("post /api/sendToken");
+    console.log("post /api/sendToken...");
     const privateKey = req.body.privateKey;
     const tokenContractAddress = req.body.tokenContractAddress;
     const toAddress = req.body.toAddress;
     const amount = req.body.amount;
+
     let result = await bnbManager.sendToken(privateKey,tokenContractAddress,toAddress,parseFloat(amount),3)
     
     res.json({hash : result.transactionHash});

